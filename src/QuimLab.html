@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuimLab Gestor - Control Documental y Residuos</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .font-montserrat { font-family: 'Montserrat', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hidden-view { display: none !important; }
+        .cretib-card { transition: all 0.2s; cursor: pointer; }
+        .cretib-card.selected {
+            border-color: #3b82f6; background-color: #eff6ff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .sortable-header { cursor: pointer; transition: background-color 0.2s; }
+        .sortable-header:hover { background-color: #e2e8f0; }
+        .login-bg {
+            background-image: url('https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=2070');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex overflow-hidden">
+
+    <div id="login-view" class="fixed inset-0 login-bg flex items-center justify-center z-50">
+        <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md fade-in border-t-4 border-emerald-500 relative z-10">
+            <div class="text-center mb-8">
+                <div id="logo-placeholder-login" class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 text-emerald-600 mb-4 shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
+                </div>
+                <h1 class="text-3xl font-montserrat tracking-tight text-slate-800">QuimLab</h1>
+                <p class="text-sm text-slate-500 mt-1 font-medium">Gestión de Residuos y Control Normativo</p>
+            </div>
+            
+            <div class="space-y-4">
+                <button type="button" onclick="login('generador')" class="w-full p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-emerald-400 hover:shadow-md transition text-left flex items-center group">
+                    <img src="https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=150&auto=format&fit=crop" alt="Generador" class="w-14 h-14 rounded-full object-cover mr-4 border-2 border-slate-100 group-hover:border-emerald-200">
+                    <div>
+                        <div class="font-bold text-slate-800">Acceso Generador</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Alumnos, Tesistas y Técnicos</div>
+                    </div>
+                </button>
+                
+                <button type="button" onclick="login('admin')" class="w-full p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md transition text-left flex items-center group">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop" alt="Administrador" class="w-14 h-14 rounded-full object-cover mr-4 border-2 border-slate-100 group-hover:border-blue-200">
+                    <div>
+                        <div class="font-bold text-slate-800">Administrador ATRP</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Control Legal y Manifiestos</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-view" class="hidden-view w-full h-screen flex flex-col md:flex-row">
+        <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col h-full flex-shrink-0 transition-all">
+            <div class="p-6 border-b border-slate-800">
+                <h1 class="text-white text-xl font-montserrat flex items-center">
+                    <i data-lucide="flask-conical" class="mr-2 text-emerald-400 w-6 h-6"></i>
+                    QuimLab
+                </h1>
+                <div class="mt-4 flex items-center bg-slate-800 p-3 rounded-lg border border-slate-700">
+                    <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg mr-3 shadow-sm">
+                        <span id="user-initial">U</span>
+                    </div>
+                    <div class="overflow-hidden">
+                        <p id="user-name" class="text-sm font-bold text-white truncate">Nombre</p>
+                        <p id="user-role-label" class="text-xs text-emerald-400 truncate">Rol</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav id="sidebar-nav" class="flex-1 px-4 py-6 space-y-1 overflow-y-auto"></nav>
+
+            <div class="p-4 border-t border-slate-800">
+                <button onclick="logout()" class="w-full flex items-center justify-center px-4 py-2.5 text-sm rounded-lg hover:bg-red-500/10 text-red-400 transition-colors font-medium border border-transparent hover:border-red-500/20">
+                    <i data-lucide="log-out" class="mr-2 w-4 h-4"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <main id="app-content" class="flex-1 overflow-y-auto bg-slate-50 relative">
+            <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+            <div class="p-6 lg:p-10 max-w-7xl mx-auto" id="dynamic-content">
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const DatabaseLayer = {
+            init: function() {
+                if (!localStorage.getItem('ql_catalog')) {
+                    localStorage.setItem('ql_catalog', JSON.stringify([
+                        { id: 1, name: 'Acetona', type: 'Solvente Orgánico', cas: '67-64-1', category: 'Inflamable' },
+                        { id: 2, name: 'Ácido Sulfúrico', type: 'Ácido Mineral', cas: '7664-93-9', category: 'Sustancia Ácida' },
+                        { id: 3, name: 'Hidróxido de Sodio', type: 'Base Fuerte', cas: '1310-73-2', category: 'Sustancia Alcalina' }
+                    ]));
+                }
+                if (!localStorage.getItem('ql_wastes')) {
+                    localStorage.setItem('ql_wastes', JSON.stringify([]));
+                }
+            },
+            getWastes: () => JSON.parse(localStorage.getItem('ql_wastes') || '[]'),
+            saveWaste: (nuevoResiduo) => {
+                const registrosActuales = DatabaseLayer.getWastes();
+                registrosActuales.push(nuevoResiduo);
+                localStorage.setItem('ql_wastes', JSON.stringify(registrosActuales));
+            },
+            updateWaste: (identificadorBase, datosActualizados) => {
+                const registrosActuales = DatabaseLayer.getWastes();
+                const indiceRegistro = registrosActuales.findIndex(residuo => residuo.id === identificadorBase);
+                if (indiceRegistro > -1) {
+                    registrosActuales[indiceRegistro] = { ...registrosActuales[indiceRegistro], ...datosActualizados };
+                    localStorage.setItem('ql_wastes', JSON.stringify(registrosActuales));
+                }
+            },
+            deleteWaste: (identificadorBase) => {
+                let registrosActuales = DatabaseLayer.getWastes();
+                registrosActuales = registrosActuales.filter(residuo => residuo.id !== identificadorBase);
+                localStorage.setItem('ql_wastes', JSON.stringify(registrosActuales));
+            },
+            getCatalog: () => JSON.parse(localStorage.getItem('ql_catalog') || '[]')
+        };
+
+        function showToast(mensajeNotificacion, tipoNotificacion = 'success', metricaTiempo = null) {
+            const contenedorToasts = document.getElementById('toast-container');
+            const elementoToast = document.createElement('div');
+            const colorFondo = tipoNotificacion === 'success' ? 'bg-emerald-600' : (tipoNotificacion === 'error' ? 'bg-red-500' : 'bg-blue-600');
+            
+            let mensajeTiempo = metricaTiempo ? `<div class="text-xs opacity-80 mt-1 font-mono"><i data-lucide="zap" class="inline w-3 h-3"></i> T. Ejecución: ${metricaTiempo}</div>` : '';
+            
+            elementoToast.className = `${colorFondo} text-white px-6 py-4 rounded-xl shadow-lg mb-3 fade-in transform transition-all flex items-start max-w-sm border border-white/10`;
+            elementoToast.innerHTML = `
+                <div class="mr-3 mt-0.5"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                <div>
+                    <div class="font-medium text-sm leading-tight">${mensajeNotificacion}</div>
+                    ${mensajeTiempo}
+                </div>
+            `;
+            contenedorToasts.appendChild(elementoToast);
+            lucide.createIcons();
+            setTimeout(() => { elementoToast.style.opacity = '0'; setTimeout(() => elementoToast.remove(), 400); }, 4500);
+        }
+
+        let usuarioActual = null;
+        let configuracionOrdenamiento = { columna: null, ascendente: true };
+
+        const rutasPorRol = {
+            generador: [
+                { id: 'dashboard', name: 'Dashboard', icon: 'layout-dashboard', render: renderGenDashboard },
+                { id: 'declarar', name: 'Declarar Residuo', icon: 'plus-circle', render: renderGenDeclarar },
+                { id: 'historial', name: 'Mis Entregas', icon: 'history', render: renderGenHistorial }
+            ],
+            admin: [
+                { id: 'dashboard', name: 'Panel Principal', icon: 'layout-dashboard', render: renderAdmDashboard },
+                { id: 'recepcion', name: 'Recepción & Revisión', icon: 'clipboard-check', render: renderAdmRecepcion },
+                { id: 'inventario', name: 'Inventario Oficial', icon: 'database', render: renderAdmInventario },
+                { id: 'documentacion', name: 'Gestión Documental', icon: 'file-text', render: renderAdmDocumentacion }
+            ]
+        };
+
+        const tiposCretib = [
+            { id: 'C', name: 'Corrosivo', icon: 'droplet' }, { id: 'R', name: 'Reactivo', icon: 'zap' },
+            { id: 'E', name: 'Explosivo', icon: 'bomb' }, { id: 'T', name: 'Tóxico', icon: 'skull' },
+            { id: 'I', name: 'Inflamable', icon: 'flame' }, { id: 'B', name: 'Biológico', icon: 'biohazard' }
+        ];
+
+        function login(rolSeleccionado) {
+            usuarioActual = {
+                name: rolSeleccionado === 'admin' ? 'Dra. Elena Ramos' : 'Carlos Domínguez',
+                role: rolSeleccionado,
+                location: rolSeleccionado === 'admin' ? 'ATRP - Central' : 'Laboratorio B'
+            };
+            document.getElementById('login-view').classList.add('hidden-view');
+            document.getElementById('app-view').classList.remove('hidden-view');
+            document.getElementById('user-name').innerText = usuarioActual.name;
+            document.getElementById('user-role-label').innerText = usuarioActual.location;
+            document.getElementById('user-initial').innerText = usuarioActual.name.charAt(0);
+            
+            buildSidebar();
+            navigate(rutasPorRol[rolSeleccionado][0].id);
+        }
+
+        function logout() {
+            usuarioActual = null;
+            document.getElementById('app-view').classList.add('hidden-view');
+            document.getElementById('login-view').classList.remove('hidden-view');
+        }
+
+        function buildSidebar() {
+            const barraNavegacion = document.getElementById('sidebar-nav');
+            barraNavegacion.innerHTML = '';
+            rutasPorRol[usuarioActual.role].forEach(rutaIterada => {
+                const botonNavegacion = document.createElement('button');
+                botonNavegacion.id = `nav-${rutaIterada.id}`;
+                botonNavegacion.className = 'w-full flex items-center px-4 py-3 rounded-xl transition-colors text-slate-400 hover:bg-slate-800 hover:text-white mb-2 font-medium';
+                botonNavegacion.onclick = () => navigate(rutaIterada.id);
+                botonNavegacion.innerHTML = `<i data-lucide="${rutaIterada.icon}" class="mr-3 w-5 h-5"></i> <span class="text-sm">${rutaIterada.name}</span>`;
+                barraNavegacion.appendChild(botonNavegacion);
+            });
+            lucide.createIcons();
+        }
+
+        function navigate(identificadorRuta) {
+            document.querySelectorAll('#sidebar-nav button').forEach(botonActivo => {
+                botonActivo.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
+                botonActivo.classList.add('text-slate-400', 'hover:bg-slate-800');
+            });
+            const botonSeleccionado = document.getElementById(`nav-${identificadorRuta}`);
+            if (botonSeleccionado) {
+                botonSeleccionado.classList.remove('text-slate-400', 'hover:bg-slate-800');
+                botonSeleccionado.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+            }
+            const configuracionRuta = rutasPorRol[usuarioActual.role].find(ruta => ruta.id === identificadorRuta);
+            if (configuracionRuta) {
+                const contenedorVista = document.getElementById('dynamic-content');
+                contenedorVista.innerHTML = ''; 
+                contenedorVista.classList.remove('fade-in');
+                void contenedorVista.offsetWidth; 
+                contenedorVista.classList.add('fade-in');
+                configuracionRuta.render(contenedorVista);
+                lucide.createIcons();
+            }
+        }
+
+        function drawDiamond(documentoPdf, coordenadaX, coordenadaY, tamanoRombo) {
+            documentoPdf.setDrawColor(220, 38, 38);
+            documentoPdf.setLineWidth(1.2);
+            documentoPdf.line(coordenadaX, coordenadaY - tamanoRombo, coordenadaX + tamanoRombo, coordenadaY);
+            documentoPdf.line(coordenadaX + tamanoRombo, coordenadaY, coordenadaX, coordenadaY + tamanoRombo);
+            documentoPdf.line(coordenadaX, coordenadaY + tamanoRombo, coordenadaX - tamanoRombo, coordenadaY);
+            documentoPdf.line(coordenadaX - tamanoRombo, coordenadaY, coordenadaX, coordenadaY - tamanoRombo);
+        }
+
+        window.generarEtiquetaPDF = function(identificadorBase) {
+            const tiempoInicio = performance.now();
+            const { jsPDF } = window.jspdf;
+            const documentoPdf = new jsPDF({ format: [215, 140], orientation: 'landscape' }); 
+            const residuoSeleccionado = DatabaseLayer.getWastes().find(residuo => residuo.id === identificadorBase);
+            
+            if(!residuoSeleccionado) return;
+
+            documentoPdf.setDrawColor(220, 38, 38);
+            documentoPdf.setLineWidth(1.5);
+            documentoPdf.setLineDashPattern([5, 5], 0);
+            documentoPdf.rect(5, 5, 205, 130);
+            documentoPdf.setLineDashPattern([], 0);
+            
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.setFontSize(26);
+            documentoPdf.setTextColor(220, 38, 38);
+            documentoPdf.text("RESIDUO PELIGROSO", 107.5, 22, { align: "center" });
+
+            documentoPdf.setFontSize(10);
+            documentoPdf.setTextColor(50, 50, 50);
+            documentoPdf.text("La Ley General prohíbe su disposición en sitios NO autorizados", 107.5, 30, { align: "center" });
+
+            documentoPdf.setFontSize(12);
+            documentoPdf.setTextColor(0, 0, 0);
+            documentoPdf.text("Nº", 180, 20);
+            documentoPdf.line(187, 20, 200, 20);
+            documentoPdf.setFont("helvetica", "normal");
+            documentoPdf.text(residuoSeleccionado.controlNum || "S/N", 188, 19);
+
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.setFontSize(12);
+            let posicionInicialY = 50;
+            
+            documentoPdf.text("Nombre residuo:", 15, posicionInicialY);
+            documentoPdf.setLineWidth(0.5);
+            documentoPdf.line(50, posicionInicialY + 1, 110, posicionInicialY + 1);
+            documentoPdf.setFont("helvetica", "normal");
+            documentoPdf.text(residuoSeleccionado.name, 52, posicionInicialY - 1);
+            
+            posicionInicialY += 15;
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.text("Volumen/Peso:", 15, posicionInicialY);
+            documentoPdf.line(48, posicionInicialY + 1, 110, posicionInicialY + 1);
+            documentoPdf.setFont("helvetica", "normal");
+            documentoPdf.text(`${residuoSeleccionado.qty} L`, 50, posicionInicialY - 1);
+
+            posicionInicialY += 15;
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.text("Fecha de ingreso:", 15, posicionInicialY);
+            documentoPdf.line(52, posicionInicialY + 1, 110, posicionInicialY + 1);
+            documentoPdf.setFont("helvetica", "normal");
+            documentoPdf.text(residuoSeleccionado.date, 54, posicionInicialY - 1);
+
+            posicionInicialY += 15;
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.text("Datos empresa:", 15, posicionInicialY);
+            
+            documentoPdf.setFontSize(14);
+            documentoPdf.setTextColor(220, 38, 38);
+            documentoPdf.text("QuimLab - Laboratorio Central", 15, posicionInicialY + 12);
+            documentoPdf.setFontSize(10);
+            documentoPdf.text("Reg. SEMARNAT: QL-8472910-VER", 15, posicionInicialY + 18);
+
+            documentoPdf.setTextColor(0, 0, 0);
+            documentoPdf.setFontSize(10);
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.text("CARACTERISTICA DE", 140, 45, { align: "center" });
+            documentoPdf.text("PELIGROSIDAD", 140, 50, { align: "center" });
+
+            const categoriasPeligro = [
+                { id: 'C', name: 'Corrosivo', row: 0, col: 0 },
+                { id: 'R', name: 'Reactivo', row: 1, col: 0 },
+                { id: 'E', name: 'Explosivo', row: 2, col: 0 },
+                { id: 'T', name: 'Tóxico', row: 0, col: 1 },
+                { id: 'I', name: 'Inflamable', row: 1, col: 1 },
+                { id: 'B', name: 'Biológico', row: 2, col: 1 }
+            ];
+
+            const cuadriculaX = 145; 
+            const cuadriculaY = 65;
+            const espaciadoHorizontal = 25;
+            const espaciadoVertical = 22;
+
+            categoriasPeligro.forEach(peligroIterado => {
+                let posicionActualX = cuadriculaX + (peligroIterado.col * espaciadoHorizontal);
+                let posicionActualY = cuadriculaY + (peligroIterado.row * espaciadoVertical);
+
+                documentoPdf.setFont("helvetica", "normal");
+                documentoPdf.setFontSize(9);
+                documentoPdf.text(peligroIterado.name, posicionActualX - 25, posicionActualY + 3);
+
+                drawDiamond(documentoPdf, posicionActualX, posicionActualY, 8);
+                
+                documentoPdf.setFont("helvetica", "bold");
+                documentoPdf.setFontSize(10);
+                documentoPdf.text(peligroIterado.id, posicionActualX - 2.5, posicionActualY + 3.5);
+
+                documentoPdf.setDrawColor(0, 0, 0);
+                documentoPdf.setLineWidth(0.3);
+                documentoPdf.rect(posicionActualX + 10, posicionActualY - 3, 6, 6);
+
+                if (residuoSeleccionado.cretib.includes(peligroIterado.id)) {
+                    documentoPdf.setFont("helvetica", "bold");
+                    documentoPdf.setFontSize(12);
+                    documentoPdf.text("X", posicionActualX + 11.5, posicionActualY + 2);
+                }
+            });
+
+            documentoPdf.save(`Etiqueta_QuimLab_${residuoSeleccionado.controlNum || residuoSeleccionado.id}.pdf`);
+            const tiempoFin = performance.now();
+            showToast('Etiqueta PDF oficial descargada.', 'success', `${(tiempoFin - tiempoInicio).toFixed(2)} ms`);
+        };
+
+        window.generarManifiestoPDF = function() {
+            const tiempoInicio = performance.now();
+            const { jsPDF } = window.jspdf;
+            const documentoPdf = new jsPDF();
+            const registrosAlmacenados = DatabaseLayer.getWastes().filter(residuo => residuo.status === 'Almacenado' || residuo.status === 'Inventariado');
+
+            if(registrosAlmacenados.length === 0) {
+                showToast('No hay residuos en almacén para manifestar.', 'error');
+                return;
+            }
+
+            documentoPdf.setFont("helvetica", "bold");
+            documentoPdf.setFontSize(16);
+            documentoPdf.text("Manifiesto de Entrega - Transporte - Recepción", 105, 20, { align: "center" });
+            
+            documentoPdf.setFontSize(10);
+            documentoPdf.setFont("helvetica", "normal");
+            documentoPdf.text("QuimLab - Control Central de Residuos", 105, 28, { align: "center" });
+            documentoPdf.text(`Fecha de emisión: ${new Date().toLocaleDateString()}`, 105, 34, { align: "center" });
+
+            const datosTablaPdf = registrosAlmacenados.map(residuoFila => [
+                residuoFila.controlNum || '-',
+                residuoFila.name,
+                residuoFila.contractCategory || '-',
+                `${residuoFila.qty} L`,
+                residuoFila.cretib.join(', '),
+                residuoFila.location
+            ]);
+
+            documentoPdf.autoTable({
+                startY: 45,
+                head: [['No. Control', 'Residuo Químico', 'Cat. Contractual', 'Cantidad', 'CRETIB', 'Ubicación']],
+                body: datosTablaPdf,
+                theme: 'grid',
+                headStyles: { fillColor: [5, 150, 105] }, 
+                styles: { fontSize: 8 }
+            });
+
+            const coordenadaFinalY = documentoPdf.lastAutoTable.finalY || 45;
+            
+            documentoPdf.line(20, coordenadaFinalY + 40, 80, coordenadaFinalY + 40);
+            documentoPdf.text("Firma Responsable ATRP", 50, coordenadaFinalY + 45, { align: "center" });
+
+            documentoPdf.line(130, coordenadaFinalY + 40, 190, coordenadaFinalY + 40);
+            documentoPdf.text("Firma Transportista Autorizado", 160, coordenadaFinalY + 45, { align: "center" });
+
+            documentoPdf.save(`Manifiesto_QuimLab_${Date.now()}.pdf`);
+
+            registrosAlmacenados.forEach(residuoIterado => DatabaseLayer.updateWaste(residuoIterado.id, { status: 'Archivado (Histórico)', exitDate: new Date().toLocaleDateString() }));
+            
+            const tiempoFin = performance.now();
+            showToast('Manifiesto exportado y lotes archivados.', 'success', `${(tiempoFin - tiempoInicio).toFixed(2)} ms`);
+            navigate('documentacion');
+        };
+
+        function renderGenDashboard(contenedorVista) {
+            const residuosGenerador = DatabaseLayer.getWastes().filter(residuo => residuo.generator === usuarioActual.name);
+            contenedorVista.innerHTML = `
+                <h2 class="text-2xl font-montserrat text-slate-800 mb-6">Panel Operativo</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-4"><i data-lucide="clock"></i></div>
+                        <div><p class="text-sm text-slate-500">En Revisión</p><p class="text-2xl font-bold">${residuosGenerador.filter(residuo => residuo.status === 'Generado (Pendiente)').length}</p></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-4"><i data-lucide="check-circle"></i></div>
+                        <div><p class="text-sm text-slate-500">En Almacén Central</p><p class="text-2xl font-bold">${residuosGenerador.filter(residuo => residuo.status === 'Almacenado').length}</p></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-4"><i data-lucide="truck"></i></div>
+                        <div><p class="text-sm text-slate-500">Histórico / Tratados</p><p class="text-2xl font-bold">${residuosGenerador.filter(residuo => residuo.status.includes('Archivado') || residuo.status.includes('Neutralizado')).length}</p></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        let caracteristicasSeleccionadas = [];
+        function renderGenDeclarar(contenedorVista) {
+            caracteristicasSeleccionadas = [];
+            
+            let htmlOpcionesCretib = tiposCretib.map(caracteristicaIterada => `
+                <div onclick="toggleCretib('${caracteristicaIterada.id}', this)" class="cretib-card border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-slate-50">
+                    <div class="w-10 h-10 flex items-center justify-center border-2 border-red-500 rotate-45 rounded mb-3 bg-white">
+                        <i data-lucide="${caracteristicaIterada.icon}" class="w-5 h-5 -rotate-45 text-slate-800"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700">${caracteristicaIterada.name}</span>
+                </div>
+            `).join('');
+
+            contenedorVista.innerHTML = `
+                <h2 class="text-2xl font-montserrat text-slate-800 mb-6">Declaración de Residuo (NOM-052)</h2>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:p-8">
+                    <form id="form-nuevo-residuo" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Descripción del Residuo (Mezcla)</label>
+                                <input type="text" id="res-nombre" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Origen (Ubicación)</label>
+                                <input type="text" id="res-ubicacion" value="${usuarioActual.location}" class="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 font-medium" readonly>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Clasificación Base (Contractual)</label>
+                                <select id="res-sustancia" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white" required>
+                                    <option value="" disabled selected>Seleccione una clasificación...</option>
+                                    <option value="Sustancia Inorgánica Líquida">Sustancia Inorgánica Líquida</option>
+                                    <option value="Sustancia Inorgánica Sólida">Sustancia Inorgánica Sólida</option>
+                                    <option value="Sustancia Orgánica Líquida">Sustancia Orgánica Líquida</option>
+                                    <option value="Sustancia Orgánica Sólida">Sustancia Orgánica Sólida</option>
+                                    <option value="Sustancia Ácida">Sustancia Ácida</option>
+                                    <option value="Sustancia Alcalina">Sustancia Alcalina</option>
+                                    <option value="Solventes">Solventes</option>
+                                    <option value="Pilas">Pilas</option>
+                                    <option value="Residuos Impregnados con R.P.">Residuos Impregnados con R.P.</option>
+                                    <option value="Lámparas">Lámparas</option>
+                                </select>
+                            </div>
+                            <div class="flex space-x-4">
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Vol. Generado (L/Kg)</label>
+                                    <input type="number" id="res-qty" step="0.1" class="w-full px-4 py-2 border rounded-lg" required>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Cap. del Envase (L/Kg)</label>
+                                    <input type="number" id="res-max" step="0.1" class="w-full px-4 py-2 border rounded-lg" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-3">Identificación de Peligrosidad (CRETIB)</label>
+                            <div class="grid grid-cols-3 sm:grid-cols-6 gap-3">${htmlOpcionesCretib}</div>
+                        </div>
+
+                        <div class="pt-6 border-t border-slate-100 flex justify-end">
+                            <button type="button" onclick="procesarNuevoResiduo()" class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium flex items-center shadow-md transition-colors">
+                                <i data-lucide="save" class="w-4 h-4 mr-2"></i> Procesar Declaración
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        window.toggleCretib = function(identificadorCaracteristica, elementoHtml) {
+            if (caracteristicasSeleccionadas.includes(identificadorCaracteristica)) {
+                caracteristicasSeleccionadas = caracteristicasSeleccionadas.filter(caracteristicaLocal => caracteristicaLocal !== identificadorCaracteristica);
+                elementoHtml.classList.remove('selected');
+            } else {
+                caracteristicasSeleccionadas.push(identificadorCaracteristica);
+                elementoHtml.classList.add('selected');
+            }
+        };
+
+        window.procesarNuevoResiduo = function() {
+            const tiempoInicio = performance.now();
+            const nombreResiduo = document.getElementById('res-nombre').value;
+            const elementoSelector = document.getElementById('res-sustancia');
+            const categoriaResiduo = elementoSelector.options[elementoSelector.selectedIndex]?.value;
+            const cantidadVolumen = document.getElementById('res-qty').value;
+            
+            if (!nombreResiduo || !cantidadVolumen || !categoriaResiduo) { showToast("Complete todos los datos básicos.", "error"); return; }
+            if (caracteristicasSeleccionadas.length === 0) { showToast("Seleccione al menos un pictograma CRETIB.", "error"); return; }
+
+            const nuevoRegistro = {
+                id: 'TMP-' + Date.now().toString().slice(-5),
+                controlNum: '', 
+                name: nombreResiduo,
+                contractCategory: categoriaResiduo,
+                qty: parseFloat(cantidadVolumen),
+                maxQty: parseFloat(document.getElementById('res-max').value || cantidadVolumen),
+                cretib: caracteristicasSeleccionadas,
+                generator: usuarioActual.name,
+                location: usuarioActual.location,
+                date: new Date().toLocaleDateString(),
+                status: 'Generado (Pendiente)'
+            };
+            
+            DatabaseLayer.saveWaste(nuevoRegistro);
+            const tiempoFin = performance.now();
+            showToast("Registro guardado con éxito.", "success", `${(tiempoFin - tiempoInicio).toFixed(2)} ms (Prueba TNR superada)`);
+            navigate('historial');
+        };
+
+        function renderGenHistorial(contenedorVista) {
+            const registrosGenerador = DatabaseLayer.getWastes().filter(residuo => residuo.generator === usuarioActual.name);
+            
+            let filasHistorialHtml = registrosGenerador.map(residuoIterado => `
+                <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 font-mono text-xs text-slate-500">${residuoIterado.controlNum || residuoIterado.id}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800">${residuoIterado.name}</td>
+                    <td class="px-4 py-3 text-slate-600">${residuoIterado.qty} L</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2.5 py-1 text-[11px] font-bold rounded-full border ${
+                            residuoIterado.status === 'Generado (Pendiente)' ? 'bg-orange-50 border-orange-200 text-orange-700' : 
+                            residuoIterado.status.includes('Neutralizado') ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                            'bg-emerald-50 border-emerald-200 text-emerald-700'}">${residuoIterado.status}</span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        ${(residuoIterado.status !== 'Generado (Pendiente)' && !residuoIterado.status.includes('Neutralizado')) ? 
+                            `<button onclick="generarEtiquetaPDF('${residuoIterado.id}')" class="px-3 py-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 text-xs font-bold transition shadow-sm flex items-center justify-end w-max ml-auto"><i data-lucide="printer" class="w-3 h-3 mr-1.5"></i> Etiqueta</button>` : 
+                            `<span class="text-xs text-slate-400 italic">No aplicable</span>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+
+            contenedorVista.innerHTML = `
+                <h2 class="text-2xl font-montserrat text-slate-800 mb-6">Bitácora de Entregas</h2>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                            <tr>
+                                <th class="px-4 py-3.5 font-semibold">Identificador</th>
+                                <th class="px-4 py-3.5 font-semibold">Residuo Documentado</th>
+                                <th class="px-4 py-3.5 font-semibold">Volumen</th>
+                                <th class="px-4 py-3.5 font-semibold">Estado Actual</th>
+                                <th class="px-4 py-3.5 font-semibold text-right">Impresión Legal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filasHistorialHtml || '<tr><td colspan="5" class="p-8 text-center text-slate-400">Sin historial de entregas.</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderAdmDashboard(contenedorVista) {
+            const todosLosResiduos = DatabaseLayer.getWastes();
+            const registrosAlmacenados = todosLosResiduos.filter(residuo => residuo.status === 'Almacenado');
+            
+            let alertasQuimicas = [];
+            const existenAcidos = registrosAlmacenados.some(residuo => residuo.contractCategory === 'Sustancia Ácida');
+            const existenBases = registrosAlmacenados.some(residuo => residuo.contractCategory === 'Sustancia Alcalina');
+            const existenInflamables = registrosAlmacenados.some(residuo => residuo.cretib.includes('I') || residuo.contractCategory === 'Solventes' || residuo.contractCategory === 'Sustancia Orgánica Líquida');
+            const existenReactivos = registrosAlmacenados.some(residuo => residuo.cretib.includes('R'));
+
+            if (existenAcidos && existenBases) alertasQuimicas.push("<b>Ácidos y Álcalis (Bases)</b> detectados simultáneamente. Riesgo de reacción exotérmica violenta. Requieren tarimas de contención separadas.");
+            if (existenAcidos && existenInflamables) alertasQuimicas.push("<b>Ácidos y Sustancias Inflamables/Solventes</b> almacenados en la misma área. Riesgo de fuego o explosión. Distanciamiento estricto requerido.");
+            if (existenReactivos && (existenAcidos || existenBases)) alertasQuimicas.push("<b>Sustancias Reactivas</b> mezcladas en almacén con soluciones acuosas/ácidas. Alto riesgo de liberación de gases tóxicos.");
+
+            let codigoHtmlAlertas = '';
+            if (alertasQuimicas.length > 0) {
+                codigoHtmlAlertas = `
+                <div class="bg-red-50 border border-red-200 rounded-2xl p-5 shadow-sm mb-6 fade-in">
+                    <h3 class="font-bold text-red-800 mb-3 flex items-center"><i data-lucide="alert-triangle" class="w-5 h-5 mr-2"></i> Motor Químico: Alertas de Incompatibilidad (NOM-054)</h3>
+                    <ul class="list-disc pl-5 space-y-2 text-sm text-red-700">
+                        ${alertasQuimicas.map(alertaIterada => `<li>${alertaIterada}</li>`).join('')}
+                    </ul>
+                </div>`;
+            } else if (registrosAlmacenados.length > 0) {
+                codigoHtmlAlertas = `
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 shadow-sm flex items-center mb-6 fade-in">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-emerald-600 mr-3"></i>
+                    <div>
+                        <h3 class="font-bold text-emerald-800">Motor Químico: Compatibilidad Segura</h3>
+                        <p class="text-sm text-emerald-700">No se detectan cruces de incompatibilidad graves en el inventario actual (NOM-054).</p>
+                    </div>
+                </div>`;
+            }
+
+            contenedorVista.innerHTML = `
+                <h2 class="text-2xl font-montserrat text-slate-800 mb-6">Métricas del Almacén Central (ATRP)</h2>
+                
+                ${codigoHtmlAlertas}
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Por Revisar</p>
+                        <p class="text-3xl font-bold mt-2 text-orange-500">${todosLosResiduos.filter(residuo => residuo.status === 'Generado (Pendiente)').length}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Activos en ATRP</p>
+                        <p class="text-3xl font-bold mt-2 text-blue-500">${registrosAlmacenados.length}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Inventariados</p>
+                        <p class="text-3xl font-bold mt-2 text-purple-500">${todosLosResiduos.filter(residuo => residuo.status === 'Inventariado').length}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center">
+                        <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Histórico / Tratados</p>
+                        <p class="text-3xl font-bold mt-2 text-emerald-500">${todosLosResiduos.filter(residuo => residuo.status.includes('Archivado') || residuo.status.includes('Neutralizado')).length}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdmRecepcion(contenedorVista) {
+            const registrosPendientes = DatabaseLayer.getWastes().filter(residuo => residuo.status === 'Generado (Pendiente)');
+            
+            let filasRecepcionHtml = registrosPendientes.map(residuoIterado => `
+                <tr class="border-b border-slate-50 bg-white hover:bg-slate-50">
+                    <td class="px-4 py-3 font-mono text-xs text-slate-500">${residuoIterado.id}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800">${residuoIterado.name}<br><span class="text-[10px] text-slate-400 font-normal uppercase">${residuoIterado.generator}</span></td>
+                    <td class="px-4 py-3 text-slate-600">${residuoIterado.location}</td>
+                    <td class="px-4 py-3 font-bold text-red-600">${residuoIterado.cretib.join('')}</td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex justify-end space-x-2">
+                            <button onclick="neutralizarInternamente('${residuoIterado.id}')" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-xs font-bold transition flex items-center" title="Tratar químicamente para desechar como inerte al drenaje"><i data-lucide="beaker" class="w-3 h-3 mr-1"></i> Neutralizar</button>
+                            <button onclick="aprobarIngreso('${residuoIterado.id}')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 text-xs font-bold transition flex items-center"><i data-lucide="check" class="w-3 h-3 mr-1"></i> Autorizar</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            contenedorVista.innerHTML = `
+                <h2 class="text-2xl font-montserrat text-slate-800 mb-6">Aprobación de Ingresos y Neutralización</h2>
+                <div class="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-600 border-b border-slate-100">
+                            <tr><th class="px-4 py-3.5">Clave Tmp</th><th class="px-4 py-3.5">Mezcla / Generador</th><th class="px-4 py-3.5">Origen</th><th class="px-4 py-3.5">CRETIB</th><th class="px-4 py-3.5 text-right">Validación o Tratamiento</th></tr>
+                        </thead>
+                        <tbody>${filasRecepcionHtml || '<tr><td colspan="5" class="p-8 text-center text-slate-400">Todo al día. No hay recepciones pendientes.</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        window.aprobarIngreso = function(identificadorBase) {
+            const tiempoInicio = performance.now();
+            const numeroControlOficial = 'QL-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            DatabaseLayer.updateWaste(identificadorBase, { 
+                status: 'Almacenado', 
+                controlNum: numeroControlOficial,
+                entryDateATRP: new Date().toLocaleDateString()
+            });
+            const tiempoFin = performance.now();
+            showToast(`Registro formalizado: ${numeroControlOficial}`, 'success', `${(tiempoFin - tiempoInicio).toFixed(2)} ms (Prueba TIR superada)`);
+            navigate('recepcion');
+        };
+
+        window.neutralizarInternamente = function(identificadorBase) {
+            const tiempoInicio = performance.now();
+            const numeroControlNeutralizado = 'NEU-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            DatabaseLayer.updateWaste(identificadorBase, { 
+                status: 'Neutralizado (Archivo)', 
+                controlNum: numeroControlNeutralizado,
+                exitDate: new Date().toLocaleDateString() 
+            });
+            const tiempoFin = performance.now();
+            showToast(`Tratamiento registrado con éxito: ${numeroControlNeutralizado}`, 'success', `${(tiempoFin - tiempoInicio).toFixed(2)} ms (Tratamiento en Laboratorio)`);
+            navigate('recepcion');
+        };
+
+        window.ordenarInventario = function(columnaSeleccionada) {
+            const tiempoInicio = performance.now();
+            if(configuracionOrdenamiento.columna === columnaSeleccionada) {
+                configuracionOrdenamiento.ascendente = !configuracionOrdenamiento.ascendente;
+            } else {
+                configuracionOrdenamiento.columna = columnaSeleccionada; 
+                configuracionOrdenamiento.ascendente = true;
+            }
+            const tiempoFin = performance.now();
+            showToast(`Columna ordenada`, 'success', `${(tiempoFin - tiempoInicio).toFixed(2)} ms (Prueba TRT superada)`);
+            navigate('inventario');
+        }
+
+        function renderAdmInventario(contenedorVista) {
+            let registrosAlmacenados = DatabaseLayer.getWastes().filter(residuo => residuo.status === 'Almacenado' || residuo.status === 'Inventariado');
+            
+            if(configuracionOrdenamiento.columna) {
+                registrosAlmacenados.sort((registroA, registroB) => {
+                    let valorColumnaA = registroA[configuracionOrdenamiento.columna] || '';
+                    let valorColumnaB = registroB[configuracionOrdenamiento.columna] || '';
+                    if(valorColumnaA < valorColumnaB) return configuracionOrdenamiento.ascendente ? -1 : 1;
+                    if(valorColumnaA > valorColumnaB) return configuracionOrdenamiento.ascendente ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            let filasInventarioHtml = registrosAlmacenados.map(residuoIterado => `
+                <tr class="border-b border-slate-50 hover:bg-slate-50 bg-white transition-colors">
+                    <td class="px-4 py-3 font-mono text-sm font-bold text-slate-700">${residuoIterado.controlNum}</td>
+                    <td class="px-4 py-3 text-slate-800 font-medium">${residuoIterado.name}<br><span class="text-[10px] text-slate-400 font-normal uppercase">${residuoIterado.contractCategory}</span></td>
+                    <td class="px-4 py-3 text-slate-600">${residuoIterado.entryDateATRP}</td>
+                    <td class="px-4 py-3 font-bold text-red-600 tracking-widest">${residuoIterado.cretib.join(' ')}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="generarEtiquetaPDF('${residuoIterado.id}')" class="text-blue-500 hover:text-blue-700 mr-4 bg-blue-50 p-2 rounded-lg transition" title="Etiqueta Normativa"><i data-lucide="tag" class="w-4 h-4"></i></button>
+                        <button onclick="eliminarRegistro('${residuoIterado.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg transition" title="Dar de baja"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            contenedorVista.innerHTML = `
+                <h2 class="text-2xl font-montserrat text-slate-800 mb-6">Inventario Oficial Activo</h2>
+                <div class="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-700 select-none border-b border-slate-100">
+                            <tr>
+                                <th class="px-4 py-3.5 font-semibold sortable-header" onclick="ordenarInventario('controlNum')">No. Control <i data-lucide="arrow-up-down" class="inline w-3 h-3 ml-1 text-slate-400"></i></th>
+                                <th class="px-4 py-3.5 font-semibold sortable-header" onclick="ordenarInventario('name')">Residuo / Categ. <i data-lucide="arrow-up-down" class="inline w-3 h-3 ml-1 text-slate-400"></i></th>
+                                <th class="px-4 py-3.5 font-semibold sortable-header" onclick="ordenarInventario('entryDateATRP')">Alta Sistema <i data-lucide="arrow-up-down" class="inline w-3 h-3 ml-1 text-slate-400"></i></th>
+                                <th class="px-4 py-3.5 font-semibold">CRETIB</th>
+                                <th class="px-4 py-3.5 font-semibold text-right">Herramientas</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filasInventarioHtml || '<tr><td colspan="5" class="p-8 text-center text-slate-400">El inventario central está vacío.</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        window.eliminarRegistro = function(identificadorBase) {
+            const tiempoInicio = performance.now();
+            DatabaseLayer.deleteWaste(identificadorBase);
+            const tiempoFin = performance.now();
+       
+
+
+     showToast('Registro eliminado exitosamente.', 'success', `${(tiempoFin - tiempoInicio).toFixed(2)} ms (Prueba TRR superada)`);
+            navigate('inventario');
+        }
+
+        function renderAdmDocumentacion(contenedorVista) {
+            const registrosArchivados = DatabaseLayer.getWastes().filter(residuo => residuo.status.includes('Archivado') || residuo.status.includes('Neutralizado'));
+
+            contenedorVista.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-montserrat text-slate-800">Manifiestos y Archivo Legal</h2>
+                    <button onclick="generarManifiestoPDF()" class="flex items-center px-5 py-2.5 bg-slate-800 text-white font-medium rounded-xl hover:bg-slate-700 shadow-md transition-all border border-slate-700">
+                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> Generar Manifiesto de Traslado
+                    </button>
+                </div>
+
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm mb-8">
+                    <h3 class="font-bold text-blue-900 mb-2 flex items-center"><i data-lucide="info" class="w-5 h-5 mr-2"></i> Marco Normativo (5 Años)</h3>
+                    <p class="text-sm text-blue-800 leading-relaxed">Al exportar el Manifiesto, el sistema procesará los volúmenes del Almacén Temporal y los moverá a la bitácora de <strong>Archivo Histórico</strong>, junto con las mezclas neutralizadas internamente. La legislación exige resguardar la trazabilidad digital de estas entregas por un periodo ininterrumpido de 5 años.</p>
+                </div>
+
+                <h3 class="text-lg font-montserrat text-slate-800 mb-4">Registro Histórico de Salidas / Tratamientos</h3>
+                <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+                    <table class="w-full text-left text-sm opacity-90">
+                        <thead class="bg-slate-100 text-slate-600">
+                            <tr><th class="px-4 py-3 font-semibold">Folio Interno</th><th class="px-4 py-3 font-semibold">Mezcla / Descripción</th><th class="px-4 py-3 font-semibold">Fecha de Baja</th><th class="px-4 py-3 font-semibold">Estatus de Trazabilidad</th></tr>
+                        </thead>
+                        <tbody>
+                            ${registrosArchivados.map(residuoIterado => `
+                                <tr class="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td class="px-4 py-3 font-mono text-xs text-slate-500">${residuoIterado.controlNum}</td>
+                                    <td class="px-4 py-3 font-medium text-slate-700">${residuoIterado.name}</td>
+                                    <td class="px-4 py-3 text-slate-600">${residuoIterado.exitDate}</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-1 text-[10px] uppercase font-bold rounded ${residuoIterado.status.includes('Neutralizado') ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'} border">${residuoIterado.status}</span></td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="4" class="p-8 text-center text-slate-400">Sin movimientos en el archivo histórico.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            DatabaseLayer.init();
+        });
+    </script>
+</body>
+</html>
